@@ -1,8 +1,5 @@
-[phases.setup]
-nixPkgs = ["python3", "pip"]
-
 [phases.install]
-cmds = ["pip install -r requirements.txt"]
+cmds = ["python -m venv /opt/venv", ". /opt/venv/bin/activate", "pip install -r requirements.txt"]
 
 [start]
-cmd = "FLASK_APP=AI/LLM.py flask run --host=0.0.0.0 --port=${PORT:-5000}"
+cmd = ". /opt/venv/bin/activate && FLASK_APP=AI/LLM.py flask run --host=0.0.0.0 --port=${PORT:-5000}"

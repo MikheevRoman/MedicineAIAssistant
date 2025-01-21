@@ -1,4 +1,4 @@
-flask
+Flask
 python-dotenv
 requests
 aiogram
@@ -11,4 +11,3 @@ torch
 sentence-transformers
 openai
 langchain-openai
-.idea

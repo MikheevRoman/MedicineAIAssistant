@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["python3", "pip"]
+
+[phases.install]
+cmds = ["pip install -r requirements.txt"]
+
+[start]
+cmd = "FLASK_APP=AI/LLM.py flask run --host=0.0.0.0 --port=${PORT:-5000}"

@@ -11,3 +11,4 @@ torch
 sentence-transformers
 openai
 langchain-openai
+.idea

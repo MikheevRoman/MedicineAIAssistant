@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="8937c1db-6a48-4319-8c2d-9bf58ac9c446" name="Changes" comment="init">
+      <change afterPath="$PROJECT_DIR$/.idea/MedicineAIAssistant.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/AI/LLM.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/AI/context_manager.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/AI/embeddings_handler.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/AI/medical_analyzer.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/AI/pdf_processor.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/AI/text_preprocessing.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/TESTBOT/bot.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/TESTBOT/message_handler.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/data.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/logger_config.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/medical_books/cardiology/Кардиология национальное руководство.pdf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/medical_books/dentistry/Е_В_Боровский_Терапевтическая_стоматология_2011_829_с_.pdf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/medical_books/neurology/nevrologi.pdf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/medical_books/obstetrics/prakticheskoe-rukovodstvo-k-predmetu-osnovyi-sd-muhina-tarnovskaya-2002.pdf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/medical_books/ophthalmology/Oftalm_Kopaeva_uchebnik.pdf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/medical_books/pediatrics/1448282156_379_geppe_n.a.,_podchernyaevoy_n.s._-_propedevtika_detskih_bolezney.pdf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/medical_books/surgery/Кузин-М.И.-Хирургические-болезни-2002.pdf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/medical_books/therapy/Propedevtika_vnutrennikh_boleznei_774_Mukhin_N_A__Moiseev.pdf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/medical_terms.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/requirements.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/vector_stores/akusherstvo_50c1b44d.faiss" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/vector_stores/akusherstvo_50c1b44d.pkl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/vector_stores/hirurgiya_0279645d.faiss" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/vector_stores/hirurgiya_0279645d.pkl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/vector_stores/kardiologiya_7707086f.faiss" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/vector_stores/kardiologiya_7707086f.pkl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/vector_stores/nevrologiya_5d23d860.faiss" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/vector_stores/nevrologiya_5d23d860.pkl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/vector_stores/oftalmologiya_a4db9062.faiss" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/vector_stores/oftalmologiya_a4db9062.pkl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/vector_stores/pediatriya_b9707068.faiss" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/vector_stores/pediatriya_b9707068.pkl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/vector_stores/stomatologiya_3fbbc040.faiss" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/vector_stores/stomatologiya_3fbbc040.pkl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/vector_stores/terapiya_1df6ccaf.faiss" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/llm/vector_stores/terapiya_1df6ccaf.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="UPDATE_TYPE" value="REBASE" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "Petr0vDaniil"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/MikheevRoman/MedicineAIAssistant.git",
+    "accountId": "e757360c-7474-4a74-a9ff-782b9839a944"
+  }
+}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 6
+}</component>
+  <component name="ProjectId" id="2rwpOF5lc8pxWS9fNsTeR6BNO1R" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "master",
+    "ignore.virus.scanning.warn.message": "true"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\leen\PycharmProjects\MedicineAIAssistant\llm" />
+    </key>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-python-sdk-495700d161d3-aa17d162503b-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-243.22562.220" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="8937c1db-6a48-4319-8c2d-9bf58ac9c446" name="Changes" comment="" />
+      <created>1737479957250</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1737479957250</updated>
+    </task>
+    <task id="LOCAL-00001" summary="init">
+      <option name="closed" value="true" />
+      <created>1737480197137</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1737480197137</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
+    <servers />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="init" />
+    <option name="LAST_COMMIT_MESSAGE" value="init" />
+  </component>
+</project>

@@ -3,7 +3,7 @@ from typing import Dict
 from langchain_community.vectorstores import FAISS
 from llm.AI.medical_analyzer import MedicalContextAnalyzer, SearchResult
 from text_preprocessing import clean_text
-from llm.logger_config import setup_logger
+from ..logger_config import setup_logger
 
 setup_logger()
 logger = logging.getLogger('context_manager')

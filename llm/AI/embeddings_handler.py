@@ -4,7 +4,7 @@ import torch
 from typing import List
 import logging
 from langchain.embeddings.base import Embeddings
-from logger_config import setup_logger
+from llm.logger_config import setup_logger
 import threading
 
 setup_logger()

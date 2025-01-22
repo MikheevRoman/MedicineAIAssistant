@@ -1,7 +1,7 @@
 import re
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import logging
-from ..logger_config import setup_logger
+from logger_config import setup_logger
 
 setup_logger()
 logger = logging.getLogger('text_preprocessing')

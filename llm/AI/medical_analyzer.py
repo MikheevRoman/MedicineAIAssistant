@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import List, Dict, Any
 import json
 import logging
-from ..logger_config import setup_logger
+from logger_config import setup_logger
 
 setup_logger()
 logger = logging.getLogger('medical_analyzer')

@@ -8,7 +8,7 @@ import logging
 from embeddings_handler import CustomEmbeddings
 from pdf_processor import load_and_process_pdfs
 from context_manager import get_relevant_context
-from ..logger_config import setup_logger
+from logger_config import setup_logger
 
 setup_logger()
 logger = logging.getLogger('llm')

@@ -10,7 +10,7 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import FAISS
 from text_preprocessing import clean_text, create_medical_text_splitter
 from embeddings_handler import CustomEmbeddings
-from ..logger_config import setup_logger
+from logger_config import setup_logger
 
 setup_logger()
 logger = logging.getLogger('pdf_processor')

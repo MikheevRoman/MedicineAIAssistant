@@ -1,2 +1,7 @@
 .idea
 llm/opt/
+llm/.idea/
+llm/__pycache__/
+llm/.venv/
+llm/AI/__pycache__/
+llm/AI/bot.log

@@ -3,7 +3,9 @@ aiogram
 requests
 openai
 flask
+faiss-cpu
 langchain_community
 torch
 transformers
 PyMuPDF
+pypdf

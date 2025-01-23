@@ -16,8 +16,8 @@ def create_medical_text_splitter() -> RecursiveCharacterTextSplitter:
     """Создает оптимизированный разделитель текста для медицинских документов"""
     return RecursiveCharacterTextSplitter(
         separators=["\n\n", "\n", ".", ";", ":", " ", ""],
-        chunk_size=2000,
-        chunk_overlap=300,
+        chunk_size=4000,
+        chunk_overlap=600,
         length_function=len,
         is_separator_regex=False
     ) 

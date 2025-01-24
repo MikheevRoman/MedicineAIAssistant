@@ -1,6 +1,5 @@
 import os
 import glob
-import logging
 import threading
 import hashlib
 from concurrent.futures import ThreadPoolExecutor
@@ -10,10 +9,11 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import FAISS
 from text_preprocessing import clean_text, create_medical_text_splitter
 from embeddings_handler import CustomEmbeddings
-from logger_config import setup_logger
+from logging_config import setup_logger
 
-setup_logger()
-logger = logging.getLogger('pdf_processor')
+# Инициализация логгеров
+pdf_logger = setup_logger('pdf_processor', 'PDF_PROCESSING_LOGGING')
+file_logger = setup_logger('pdf_processor_file', 'FILE_OPERATIONS_LOGGING')
 
 NUMBER_OF_CORES = max(1, multiprocessing.cpu_count() - 1)
 VECTOR_STORE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "vector_stores")
@@ -31,14 +31,16 @@ PDF_CATEGORIES = {
 def calculate_files_hash(file_paths: list) -> str:
     """Вычисляет общий хеш для списка файлов"""
     hasher = hashlib.md5()
+    file_logger.info(f"Вычисление хеша для {len(file_paths)} файлов")
     for file_path in sorted(file_paths):  # Сортируем для стабильности хеша
         try:
             with open(file_path, 'rb') as f:
                 # Читаем файл блоками для экономии памяти
                 for chunk in iter(lambda: f.read(4096), b''):
                     hasher.update(chunk)
+            file_logger.info(f"Обработан файл: {file_path}")
         except Exception as e:
-            logger.error(f"Ошибка при чтении файла {file_path}: {e}")
+            file_logger.error(f"Ошибка при чтении файла {file_path}: {e}")
     return hasher.hexdigest()
 
 def get_category_hash(category: str, file_paths: list) -> str:
@@ -58,6 +60,7 @@ def get_category_hash(category: str, file_paths: list) -> str:
     
     # Создаем идентификатор только из хеша файлов
     category_id = f"{category_en}_{files_hash[:8]}"
+    file_logger.info(f"Создан идентификатор для категории {category}: {category_id}")
     return category_id
 
 def process_single_pdf(args: Tuple[str, str, str]) -> Optional[Tuple[str, FAISS]]:
@@ -70,7 +73,7 @@ def process_single_pdf(args: Tuple[str, str, str]) -> Optional[Tuple[str, FAISS]
     try:
         # Проверяем существование обоих файлов
         if not (os.path.exists(vector_store_path) and os.path.exists(index_path)):
-            logger.info(f"Обработка файла {pdf_path}")
+            pdf_logger.info(f"Обработка файла {pdf_path}")
             loader = PyPDFLoader(pdf_path)
             documents = loader.load()
             
@@ -83,8 +86,8 @@ def process_single_pdf(args: Tuple[str, str, str]) -> Optional[Tuple[str, FAISS]
                 text_splitter = create_medical_text_splitter()
                 texts = text_splitter.split_documents(documents)
                 
-                logger.info(f"Файл {pdf_path} разбит на {len(texts)} чанков")
-                logger.info(f"Средний размер чанка: {sum(len(t.page_content) for t in texts) / len(texts):.0f} символов")
+                pdf_logger.info(f"Файл {pdf_path} разбит на {len(texts)} чанков")
+                pdf_logger.info(f"Средний размер чанка: {sum(len(t.page_content) for t in texts) / len(texts):.0f} символов")
                 
                 vector_store = FAISS.from_documents(texts, embeddings)
                 # Сохраняем оба файла
@@ -92,11 +95,11 @@ def process_single_pdf(args: Tuple[str, str, str]) -> Optional[Tuple[str, FAISS]
                     folder_path=VECTOR_STORE_DIR,
                     index_name=category_id
                 )
-                logger.info(f"Сохранены эмбеддинги для {category_id}")
+                pdf_logger.info(f"Сохранены эмбеддинги для {category_id}")
                 
                 return category, vector_store
         else:
-            logger.info(f"Загрузка существующих эмбеддингов для {category_id}")
+            pdf_logger.info(f"Загрузка существующих эмбеддингов для {category_id}")
             try:
                 vector_store = FAISS.load_local(
                     folder_path=VECTOR_STORE_DIR,
@@ -106,17 +109,18 @@ def process_single_pdf(args: Tuple[str, str, str]) -> Optional[Tuple[str, FAISS]
                 )
                 return category, vector_store
             except Exception as e:
-                logger.error(f"Ошибка при загрузке эмбеддингов {category_id}: {e}")
+                pdf_logger.error(f"Ошибка при загрузке эмбеддингов {category_id}: {e}")
                 # Если не удалось загрузить, удаляем поврежденные файлы
                 try:
                     os.remove(vector_store_path)
                     os.remove(index_path)
+                    file_logger.info(f"Удалены поврежденные файлы: {vector_store_path}, {index_path}")
                 except:
                     pass
                 return None
             
     except Exception as e:
-        logger.error(f"Ошибка при обработке {pdf_path}: {e}")
+        pdf_logger.error(f"Ошибка при обработке {pdf_path}: {e}")
         return None
 
 def load_and_process_pdfs() -> Dict[str, FAISS]:
@@ -124,7 +128,7 @@ def load_and_process_pdfs() -> Dict[str, FAISS]:
     vector_stores = {}
     processing_tasks = []
     
-    logger.info(f"Запуск обработки PDF файлов в {NUMBER_OF_CORES} потоков")
+    pdf_logger.info(f"Запуск обработки PDF файлов в {NUMBER_OF_CORES} потоков")
     os.makedirs(VECTOR_STORE_DIR, exist_ok=True)
     
     # Собираем все задачи для обработки
@@ -132,7 +136,7 @@ def load_and_process_pdfs() -> Dict[str, FAISS]:
         pdf_files = glob.glob(path_pattern)
         
         if not pdf_files:
-            logger.warning(f"PDF файлы не найдены для категории {category}")
+            pdf_logger.warning(f"PDF файлы не найдены для категории {category}")
             continue
         
         # Получаем уникальный идентификатор для категории
@@ -143,7 +147,7 @@ def load_and_process_pdfs() -> Dict[str, FAISS]:
             processing_tasks.append((category, pdf_path, category_id))
     
     total_tasks = len(processing_tasks)
-    logger.info(f"Всего файлов для обработки: {total_tasks}")
+    pdf_logger.info(f"Всего файлов для обработки: {total_tasks}")
     
     # Создаем словарь для хранения мьютексов по категориям
     category_locks = {category: threading.Lock() for category in PDF_CATEGORIES.keys()}
@@ -169,9 +173,9 @@ def load_and_process_pdfs() -> Dict[str, FAISS]:
                 if result:
                     process_result(result)
                 completed_tasks += 1
-                logger.info(f"Прогресс обработки: {completed_tasks}/{total_tasks} файлов ({completed_tasks/total_tasks*100:.1f}%)")
+                pdf_logger.info(f"Прогресс обработки: {completed_tasks}/{total_tasks} файлов ({completed_tasks/total_tasks*100:.1f}%)")
             except Exception as e:
-                logger.error(f"Ошибка при обработке задачи: {e}")
+                pdf_logger.error(f"Ошибка при обработке задачи: {e}")
     
-    logger.info("Обработка PDF файлов завершена")
+    pdf_logger.info("Обработка PDF файлов завершена")
     return vector_stores 

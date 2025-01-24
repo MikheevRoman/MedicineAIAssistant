@@ -8,3 +8,6 @@ llm/AI/bot.log
 llm/TESTBOT/__pycache__/
 /llm/bot.log
 /.idea
+llm/.env
+llm/AI/logs/
+llm/TESTBOT/logs/

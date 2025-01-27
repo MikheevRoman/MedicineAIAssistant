@@ -1,0 +1,28 @@
+.container {
+    height: 147px;
+    background-color: var(--tg-theme-bg-color);
+    /* background-color: gray; */
+    margin-left: -15px;
+    margin-right: -15px;
+    margin-bottom: 25px;
+}
+
+.monthYearContainer {
+    padding-top: 20px;
+    display: flex;
+    
+    margin-bottom: 13px;
+}
+
+.monthText {
+    display: inline-block;
+    margin-left: 20px;
+}
+
+.yearText {
+    display: inline-block;
+    margin-left: 10px;
+}
+
+
+

@@ -1,0 +1,92 @@
+.backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* background-color: rgba(0, 0, 0, 0.4); */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 90;
+}
+
+.container {
+    background-color: var(--tg-theme-bg-color);
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    margin: 0 45.5px;
+}
+
+.textContainer {
+    margin: 19px 26px;
+}
+
+.buttonContainer {
+    height: 44px;
+    display: flex;
+    border-top: 1px solid var(--tg-theme-secondary-bg-color);
+}
+
+.doubleButtonContainer {
+    display: flex;
+    width: 100%;
+}
+
+.button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.lightButton:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+    background-blend-mode: multiply;
+}
+
+.lightButton:active {
+    background-color: rgba(0, 0, 0, 0.1);
+    background-blend-mode: multiply;
+}
+
+.darkButton:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    background-blend-mode: multiply;
+}
+
+.darkButton:active {
+    background-color: rgba(255, 255, 255, 0.1);
+    background-blend-mode: multiply;
+}
+
+.border {
+    border-left: 1px solid var(--tg-theme-secondary-bg-color);   
+}
+
+.confirmDeleteButton {
+    color: #FF3B30;
+}
+
+.confirmCancelButton {
+    color: var(--tg-theme-link-color);
+}
+
+.singleButton {
+    width: 100%;
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+}
+
+.dualButton {
+    width: 50%;
+}
+
+.borderBottomLeftRadius {
+    border-bottom-left-radius: 14px;
+}
+
+.borderBottomRightRadius {
+    border-bottom-right-radius: 14px;
+}

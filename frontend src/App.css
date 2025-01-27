@@ -1,0 +1,39 @@
+body {
+  background-color: var(--tg-theme-secondary-bg-color);
+  color: var(--tg-theme-text-color);
+  max-width: 400px;
+  margin-left: 16px;
+  margin-right: 16px;
+}
+
+
+
+@font-face {
+  font-family: 'SF Pro Bold';
+  src: url('./fonts/SF-Pro-Display-Bold.otf') format('woff2');;
+}
+
+@font-face {
+  font-family: 'SF Pro Regular';
+  src: url('./fonts/SF-Pro-Display-Regular.otf') format('woff2');;
+}
+
+@font-face {
+  font-family: 'SF Pro Semibold';
+  src: url('./fonts/SF-Pro-Display-Semibold.otf') format('woff2');;
+}
+
+@font-face {
+  font-family: 'SF Pro Rounded Semibold';
+  src: url('./fonts/SF-Pro-Rounded-Semibold.otf') format('woff2');;
+}
+
+@font-face {
+  font-family: 'SF Pro Medium';
+  src: url('./fonts/SF-Pro-Display-Medium.otf') format('woff2');;
+}
+
+@font-face {
+  font-family: 'SF Mono Regular';
+  src: url('./fonts/SF-Mono-Regular.otf') format('woff2');;
+}

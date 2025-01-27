@@ -44,18 +44,23 @@ client = OpenAI(
     base_url="https://api.proxyapi.ru/openai/v1/chat/completions",
 )
 
-# Инициализация компонентов, не зависящих от пользователя
+# Загрузка векторных данных и обработка PDF
 embeddings = CustomEmbeddings()
 vector_stores = load_and_process_pdfs()
 
 @app.route('/check-uc', methods=['POST'])
 def process_data():
+    """
+    Обработка асинхронного запроса от клиента.
+    Основной маршрут для обработки пользовательских сообщений.
+    """
     try:
         data = request.get_json()
         messages = data.get('prompt', [])
         user_id = data.get('user_id')
         is_start_dialog = data.get('is_start_dialog', False)
 
+        # Проверка обязательных параметров
         if not user_id:
             api_logger.error("Отсутствует user_id в запросе")
             return Response(
@@ -68,13 +73,14 @@ def process_data():
         api_logger.info(f"Начало нового диалога: {is_start_dialog}")
         api_logger.info(f"Количество сообщений: {len(messages)}")
 
+        # Логика обработки сообщений
         last_user_message = next((msg['content'] for msg in reversed(messages)
                                 if msg['role'] == 'user'), '')
 
-        # Получаем или создаем менеджер разговора для пользователя
+        # Получение менеджера разговора и стартовых сообщений
         conversation_manager, start_messages = ConversationManager.get_instance(user_id, is_start_dialog)
 
-        # Обработка сообщения и обновление состояния разговора
+        # Обработка сообщения через менеджер
         conversation_state, additional_messages = conversation_manager.process_message(last_user_message, messages)
 
         if conversation_state.get('has_error', False):
@@ -84,28 +90,30 @@ def process_data():
                 mimetype='application/json'
             )
 
-        # Если это начало диалога, добавляем стартовые сообщения
+        # Добавление стартовых сообщений в случае начала диалога
         if is_start_dialog:
             conversation_state['messages'] = start_messages
         elif additional_messages:
             conversation_state['messages'] = additional_messages
 
-        # Получение системного промпта для текущей стадии
+        # Формирование системного промпта в зависимости от этапа диалога
         system_message = get_system_prompt(conversation_state)
 
-        # Добавление контекста из RAG только на стадии диагностики
+        # Добавление релевантного контекста на этапе диагностики
         if conversation_state['current_stage'] == 'DIAGNOSIS':
             rag_logger.info("Получение релевантного контекста из базы знаний")
             context = get_relevant_context(last_user_message, vector_stores)
             system_message["content"] += f"\n\nКонтекст из медицинской литературы:\n{context}"
             rag_logger.info("Контекст успешно получен")
 
+        # Полное сообщение для генерации ответа
         full_messages = [system_message] + messages
 
-        # Применяем переход этапа после формирования промпта
+        # Обработка перехода на следующий этап
         if conversation_state.get('next_stage'):
             conversation_manager.apply_stage_transition()
 
+        # Генерация ответа
         return Response(stream_with_context(generate(full_messages, conversation_state)),
                        mimetype='text/event-stream')
 
@@ -120,6 +128,16 @@ def process_data():
 
 @app.route('/check-uc-sync', methods=['POST'])
 def process_data_sync():
+    """
+        Обрабатывает синхронные POST-запросы от клиента для обработки текстовых сообщений.
+
+        Логика:
+        1. Принимает JSON с сообщениями от клиента.
+        2. Выделяет последнее пользовательское сообщение.
+        3. Создает или получает менеджер разговора для пользователя.
+        4. Обрабатывает сообщение и текущий этап разговора.
+        5. Генерирует ответ с учетом контекста и текущей стадии диалога.
+        """
     try:
         data = request.get_json()
         messages = data.get('prompt', [])
@@ -212,6 +230,11 @@ def process_data_sync():
 
 @app.route('/check-uc-sync-image', methods=['POST'])
 def process_image_sync():
+    """
+    Обработчик маршрута для проверки синхронизации изображений.
+    Метод принимает POST-запросы, выполняет обработку изображения,
+    проверяет синхронизацию и возвращает соответствующий результат.
+    """
     try:
         data = request.get_json()
         user_id = data.get('user_id')

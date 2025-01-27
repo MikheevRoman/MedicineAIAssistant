@@ -22,7 +22,18 @@ OPENAI_HEADERS = {
 }
 
 class PatientInfo:
+    """
+      Класс для сбора и обработки информации о пациенте.
+
+      Содержит методы для извлечения:
+      - возраста
+      - хронических заболеваний
+      - аллергий
+
+      А также проверки полноты собранной информации.
+      """
     def __init__(self):
+        """Инициализация с параметрами по умолчанию"""
         self.age: Optional[int] = None
         self.has_chronic_diseases: bool = True  # По умолчанию True
         self.chronic_diseases: List[str] = []
@@ -30,7 +41,7 @@ class PatientInfo:
         self.allergies: List[str] = []
         
     def to_dict(self) -> dict:
-        """Преобразует информацию о пациенте в словарь"""
+        """Сериализация данных пациента в словарь"""
         return {
             "age": self.age,
             "has_chronic_diseases": self.has_chronic_diseases,
@@ -40,13 +51,23 @@ class PatientInfo:
         }
         
     def extract_age(self, message: str, prev_message: str = None) -> Optional[int]:
-        """Извлекает возраст из сообщения пользователя"""
+        """
+        Извлечение возраста из текста сообщения с использованием GPT-модели.
+
+        Args:
+            message (str): Сообщение пользователя
+            prev_message (str, optional): Предыдущее сообщение ассистента для контекста
+
+        Returns:
+            Optional[int]: Извлеченный возраст или None
+        """
         try:
             patient_logger.info("=" * 50)
             patient_logger.info("Извлечение возраста:")
             patient_logger.info(f"Предыдущее сообщение ассистента: {prev_message}")
             patient_logger.info(f"Сообщение пользователя: {message}")
 
+            # Системный промпт для модели с правилами обработки
             system_prompt = {
                 "role": "system",
                 "content": """Извлеките возраст пациента из сообщения. Правила:
@@ -69,41 +90,46 @@ class PatientInfo:
             }
             
             patient_logger.info(f"Системный промпт для нейросети: {system_prompt['content']}")
-            
+
+            # Формирование списка сообщений для модели
             messages = [
                 system_prompt,
                 {"role": "assistant", "content": prev_message} if prev_message else None,
                 {"role": "user", "content": message}
             ]
-            
-            # Убираем None из списка сообщений
+
             messages = [msg for msg in messages if msg is not None]
-            
+
+            # Формирование тела запроса к API
             payload = {
                 "model": "gpt-4o-mini",
                 "messages": messages,
-                "temperature": 0.1,
+                "temperature": 0.1, # Низкая температура для точности
                 "max_tokens": 50
             }
-            
+
+            # Отправка POST-запроса
             response = requests.post(
                 PROXY_OPENAI_URL,
                 headers=OPENAI_HEADERS,
                 json=payload
             )
-            
+
+            # Обработка успешного ответа
             if response.status_code == 200:
                 response_content = response.json()["choices"][0]["message"]["content"]
                 patient_logger.info(f"Ответ нейросети: {response_content}")
                 result = json.loads(response_content)
                 age = result.get("age")
-                
+
+                # Обновление данных пациента
                 if age is not None:
                     self.age = age
                     patient_logger.info(f"✓ Найден и сохранен возраст: {age}")
                 else:
                     patient_logger.info("✗ Возраст не найден в сообщении")
                 return age
+            # Обработка ошибок API
             else:
                 patient_logger.error(f"Ошибка API: {response.status_code} - {response.text}")
                 return None
@@ -113,14 +139,34 @@ class PatientInfo:
             return None
         
     def extract_chronic_diseases(self, message: str, prev_message: str = None) -> List[str]:
-        """Извлекает хронические заболевания из сообщения пользователя"""
+        """
+        Извлекает хронические заболевания из сообщения пользователя.
+
+        Алгоритм работы:
+        1. Анализирует контекст предыдущего сообщения ассистента
+        2. Определяет явные отрицания в ответ на прямой вопрос
+        3. Использует GPT-модель для извлечения заболеваний
+        4. Обновляет внутреннее состояние объекта
+
+        Параметры:
+            message (str): Текущее сообщение пользователя
+            prev_message (str, optional): Последнее сообщение ассистента для контекста
+
+        Возвращает:
+            List[str]: Список новых извлеченных заболеваний (без дубликатов)
+
+        Примеры сценариев:
+            - "Нет хронических болезней" → очищает список
+            - "Гипертония и диабет" → добавляет в список
+            - "В детстве была астма" → игнорирует
+        """
         try:
             patient_logger.info("=" * 50)
             patient_logger.info("Извлечение хронических заболеваний:")
             patient_logger.info(f"Предыдущее сообщение ассистента: {prev_message}")
             patient_logger.info(f"Сообщение пользователя: {message}")
             
-            # Проверяем на явное отрицание с учетом контекста
+            # Проверка на явное отрицание в контексте вопроса о заболеваниях
             if prev_message and any(phrase in prev_message.lower() for phrase in ["хронические заболевания", "хронических заболеваний"]):
                 if any(phrase in message.lower() for phrase in ["нет", "нету", "отсутствуют", "не имею"]):
                     self.has_chronic_diseases = False
@@ -130,6 +176,7 @@ class PatientInfo:
             else:
                 patient_logger.info("Предыдущее сообщение не содержало вопроса о хронических заболеваниях")
 
+            # Формирование системного промпта с правилами извлечения
             system_prompt = {
                 "role": "system",
                 "content": """Извлеките хронические заболевания. Правила:
@@ -152,7 +199,8 @@ class PatientInfo:
             }
             
             patient_logger.info(f"Системный промпт для нейросети: {system_prompt['content']}")
-            
+
+            # Подготовка сообщений для GPT-модели
             messages = [
                 system_prompt,
                 {"role": "assistant", "content": prev_message} if prev_message else None,
@@ -160,37 +208,40 @@ class PatientInfo:
             ]
             
             # Убираем None из списка сообщений
-            messages = [msg for msg in messages if msg is not None]
+            messages = [msg for msg in messages if msg is not None] # Очистка от None
             
             payload = {
                 "model": "gpt-4o-mini",
                 "messages": messages,
-                "temperature": 0.1,
+                "temperature": 0.1, # Низкая температура для точности
                 "max_tokens": 100
             }
-            
+
+            # Отправка запроса к API
             response = requests.post(
                 PROXY_OPENAI_URL,
                 headers=OPENAI_HEADERS,
                 json=payload
             )
-            
+
+            # Обработка успешного ответа
             if response.status_code == 200:
                 response_content = response.json()["choices"][0]["message"]["content"]
                 patient_logger.info(f"Ответ нейросети: {response_content}")
                 result = json.loads(response_content)
                 diseases = result.get("diseases", [])
                 has_diseases = result.get("has_diseases", True)
-                
+
+                # Обновление состояния
                 if not has_diseases:
                     self.has_chronic_diseases = False
                     self.chronic_diseases = []
                     patient_logger.info("✓ Определено отсутствие хронических заболеваний")
                     return []
-                
+
+                # Дедупликация и объединение списков
                 if diseases:
                     self.has_chronic_diseases = True
-                    old_diseases = set(self.chronic_diseases)
                     self.chronic_diseases = list(set(self.chronic_diseases + diseases))
                     patient_logger.info(f"✓ Найдены хронические заболевания: {diseases}")
                     patient_logger.info(f"✓ Обновленный список заболеваний: {self.chronic_diseases}")
@@ -206,15 +257,32 @@ class PatientInfo:
             return []
         
     def extract_allergies(self, message: str, prev_message: str = None) -> List[str]:
-        """Извлекает аллергии из сообщения пользователя"""
+        """
+            Извлекает информацию об аллергиях из сообщения пользователя с использованием GPT-модели.
+
+            Параметры:
+                message (str): Текущее сообщение пользователя
+                prev_message (str, optional): Последнее сообщение ассистента для контекста
+
+            Возвращает:
+                List[str]: Список новых обнаруженных аллергенов (без дубликатов)
+
+            Логика работы:
+                1. Проверяет контекст на прямой вопрос об аллергиях
+                2. Определяет явное отрицание аллергий
+                3. Использует GPT для извлечения аллергенов из текста
+                4. Обновляет внутреннее состояние объекта
+                5. Возвращает новые обнаруженные аллергены
+            """
         try:
             patient_logger.info("=" * 50)
             patient_logger.info("Извлечение аллергий:")
             patient_logger.info(f"Предыдущее сообщение ассистента: {prev_message}")
             patient_logger.info(f"Сообщение пользователя: {message}")
             
-            # Проверяем на явное отрицание с учетом контекста
+            # Проверка контекста на вопрос об аллергиях
             if prev_message and any(phrase in prev_message.lower() for phrase in ["аллергии", "аллергия"]):
+                # Поиск отрицательного ответа
                 if any(phrase in message.lower() for phrase in ["нет", "нету", "отсутствуют", "не имею"]):
                     self.has_allergies = False
                     self.allergies = []
@@ -223,6 +291,7 @@ class PatientInfo:
             else:
                 patient_logger.info("Предыдущее сообщение не содержало вопроса об аллергиях")
 
+            # Формирование системного промпта с правилами извлечения
             system_prompt = {
                 "role": "system",
                 "content": """Извлеките аллергические реакции. Правила:
@@ -245,36 +314,41 @@ class PatientInfo:
             }
             
             patient_logger.info(f"Системный промпт для нейросети: {system_prompt['content']}")
-            
+
+            # Подготовка списка сообщений для модели
             messages = [
                 system_prompt,
                 {"role": "assistant", "content": prev_message} if prev_message else None,
                 {"role": "user", "content": message}
             ]
             
-            # Убираем None из списка сообщений
+            # Фильтрация None-значений
             messages = [msg for msg in messages if msg is not None]
-            
+
+            # Формирование тела запроса
             payload = {
                 "model": "gpt-4o-mini",
                 "messages": messages,
                 "temperature": 0.1,
                 "max_tokens": 100
             }
-            
+
+            # Отправка запроса к API
             response = requests.post(
                 PROXY_OPENAI_URL,
                 headers=OPENAI_HEADERS,
                 json=payload
             )
-            
+
+            # Обработка успешного ответа
             if response.status_code == 200:
                 response_content = response.json()["choices"][0]["message"]["content"]
                 patient_logger.info(f"Ответ нейросети: {response_content}")
                 result = json.loads(response_content)
                 allergies = result.get("allergies", [])
                 has_allergies = result.get("has_allergies", True)
-                
+
+                # Обновление состояния аллергий
                 if not has_allergies:
                     self.has_allergies = False
                     self.allergies = []
@@ -299,7 +373,15 @@ class PatientInfo:
             return []
 
     def is_complete(self) -> bool:
-        """Проверяет, заполнена ли вся информация о пациенте"""
+        """
+        Проверка полноты информации о пациенте.
+
+        Returns:
+            bool: True если все обязательные поля заполнены:
+                - Возраст указан
+                - При наличии хронических заболеваний - заполнен список
+                - При наличии аллергий - заполнен список
+        """
         complete = (
             self.age is not None  # Возраст указан
             and (

@@ -10,13 +10,34 @@ conv_logger = setup_logger('conversation', 'CONVERSATION_LOGGING')
 api_logger = setup_logger('conversation_api', 'API_LOGGING')
 
 class ConversationManager:
-    _instances = {}  # Словарь для хранения экземпляров менеджера для каждого пользователя
+    """
+    Класс для управления диалогом с пользователем.
+
+    Основные функции:
+    - Управление этапами диалога
+    - Обработка сообщений пользователя
+    - Хранение состояния разговора
+    - Переходы между этапами
+    - Очистка сессии
+    """
+    _instances = {}   # Хранение экземпляров по ID пользователей
 
     @classmethod
     def get_instance(cls, user_id: str, is_start_dialog: bool = False) -> Tuple['ConversationManager', List[str]]:
-        """Получает или создает экземпляр менеджера для конкретного пользователя"""
+        """
+        Получает или создает экземпляр менеджера для пользователя.
+
+        Параметры:
+        - user_id (str): ID пользователя
+        - is_start_dialog (bool): Флаг, указывающий на начало диалога
+
+        Возвращает:
+        - Экземпляр менеджера
+        - Список стартовых сообщений для отправки пользователю
+        """
         messages_to_send = []
-        
+
+        # Если это начало диалога или экземпляр отсутствует, создаем новый
         if is_start_dialog or user_id not in cls._instances:
             cls._instances[user_id] = cls(user_id)
             conv_logger.info(f"Создан новый менеджер разговора для пользователя {user_id}")
@@ -26,53 +47,82 @@ class ConversationManager:
         return cls._instances[user_id], messages_to_send
 
     def __init__(self, user_id: str):
-        """Инициализация менеджера разговора для конкретного пользователя"""
-        self.user_id = user_id
-        self.stage = ConversationStage.PATIENT_INFO
-        self.pending_stage = None
-        self.problem_info = ProblemInfo([])
-        self.patient_info = PatientInfo()
-        self.error_state = False
+        """
+        Инициализация менеджера разговора для конкретного пользователя.
+
+        Параметры:
+        - user_id (str): ID пользователя
+        """
+        self.user_id = user_id # ID пользователя
+        self.stage = ConversationStage.PATIENT_INFO # Начальный этап диалога
+        self.pending_stage = None # Этап, на который планируется переход (проставляется в процессе)
+        self.problem_info = ProblemInfo([]) # Информация о проблеме пациента
+        self.patient_info = PatientInfo() # Информация о пациенте
+        self.error_state = False # Флаг ошибки
         conv_logger.info(
-            f"Инициализирован новый менеджер разговора для пользователя {user_id}. Начальный этап: SYMPTOMS")
+            f"Инициализирован новый менеджер разговора для пользователя {user_id}. Начальный этап: SYMPTOMS"
+        )
 
 
     def set_stage(self, stage: ConversationStage):
-        """Устанавливает текущий этап разговора"""
+        """
+        Устанавливает текущий этап диалога.
+
+        Параметры:
+        - stage (ConversationStage): Новый этап диалога
+        """
         self.stage = stage
         conv_logger.info(f"Этап разговора для пользователя {self.user_id} установлен на {stage.name}")
 
 
     def get_conversation_state(self) -> dict:
-        """Возвращает текущее состояние диалога"""
+        """
+        Возвращает текущее состояние диалога.
+
+        Возвращает:
+        - dict: Состояние диалога, включая симптомы, данные о пациенте, текущий и следующий этапы
+        """
         return {
-            "symptoms": self.problem_info.symptoms.copy(),
-            "patient_info": self.patient_info.to_dict(),
-            "current_stage": self.stage.name if self.stage else None,
-            "next_stage": self.pending_stage.name if self.pending_stage else None,
-            "has_error": self.error_state
+            "symptoms": self.problem_info.symptoms.copy(), # Копия списка симптомов
+            "patient_info": self.patient_info.to_dict(), # Данные о пациенте в виде словаря
+            "current_stage": self.stage.name if self.stage else None, # Название текущего этапа
+            "next_stage": self.pending_stage.name if self.pending_stage else None, # Название следующего этапа
+            "has_error": self.error_state # Флаг ошибки
         }
 
     def process_message(self, message: str, messages: List[dict]) -> Tuple[dict, List[str]]:
-        """Обрабатывает сообщение пользователя, планирует переход этапа после ответа ассистента"""
-        try:
-            self.error_state = False
-            old_stage = self.stage
-            self.pending_stage = None  # Сбрасываем ожидающий этап
-            messages_to_send = []
+        """
+        Основной метод обработки входящих сообщений.
 
+        Параметры:
+        - message (str): Текст сообщения пользователя
+        - messages (List[dict]): История сообщений
+
+        Возвращает:
+        - dict: Текущее состояние диалога
+        - List[str]: Сообщения для отправки пользователю
+        """
+        try:
+            self.error_state = False # Сбрасываем флаг ошибки
+            old_stage = self.stage # Сохраняем текущий этап
+            self.pending_stage = None  # Сбрасываем ожидающий этап
+            messages_to_send = [] # Список сообщений для отправки
+
+            # Обработка этапа "SYMPTOMS"
             if self.stage == ConversationStage.SYMPTOMS:
                 temp_messages = messages + [{"role": "user", "content": message}]
-                self.problem_info.extract_symptoms(temp_messages)
+                self.problem_info.extract_symptoms(temp_messages) # Извлекаем симптомы из сообщений
 
-                if self.problem_info.symptoms_complete:
+                if self.problem_info.symptoms_complete:  # Если симптомы собраны полностью
                     self.pending_stage = ConversationStage.DIAGNOSIS
                     if old_stage != self.pending_stage:
-                        # Добавляем сообщение о переходе и очищаем другие сообщения
+                        # Добавляем сообщение о переходе
                         messages_to_send = STAGE_TRANSITION_MESSAGES["SYMPTOMS_TO_DIAGNOSIS"].messages.copy()
 
+            # Обработка этапа "PATIENT_INFO"
             elif self.stage == ConversationStage.PATIENT_INFO:
                 prev_message = next((msg['content'] for msg in reversed(messages) if msg['role'] == 'assistant'), None)
+                # Извлекаем информацию о возрасте, хронических заболеваниях и аллергиях
                 age = self.patient_info.extract_age(message, prev_message)
                 diseases = self.patient_info.extract_chronic_diseases(message, prev_message)
                 allergies = self.patient_info.extract_allergies(message, prev_message)
@@ -101,6 +151,7 @@ class ConversationManager:
                     if old_stage != self.pending_stage:
                         messages_to_send = STAGE_TRANSITION_MESSAGES["PATIENT_INFO_TO_SYMPTOMS"].messages.copy()
 
+            # Обработка этапа "DIAGNOSIS"
             elif self.stage == ConversationStage.DIAGNOSIS:
                 self.pending_stage = ConversationStage.DIAGNOSIS
 
@@ -127,7 +178,9 @@ class ConversationManager:
             return self.get_conversation_state(), []
 
     def apply_stage_transition(self):
-        """Применяет запланированный переход этапа"""
+        """
+        Применяет запланированный переход этапа.
+        """
         if self.pending_stage:
             conv_logger.info(f"Переход этапа с {self.stage.name} на {self.pending_stage.name}")
             self.stage = self.pending_stage
@@ -135,7 +188,15 @@ class ConversationManager:
 
     @classmethod
     def clear_user_session(cls, user_id: str) -> List[str]:
-        """Очищает сессию пользователя"""
+        """
+        Очищает сессию пользователя.
+
+        Параметры:
+        - user_id (str): ID пользователя
+
+        Возвращает:
+        - List[str]: Список стартовых сообщений
+        """
         if user_id in cls._instances:
             del cls._instances[user_id]
             conv_logger.info(f"Сессия пользователя {user_id} очищена")

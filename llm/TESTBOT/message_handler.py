@@ -6,10 +6,22 @@ from logging_config import setup_logger
 # Инициализация логгеров
 msg_logger = setup_logger('message_handler', 'API_LOGGING')
 
-BUFFER_SIZE = 50
+BUFFER_SIZE = 50 # Оптимальный размер буфера для баланса между отзывчивостью и нагрузкой
 
 async def process_stream_response(response_line: str) -> Dict[str, Any]:
-    """Обрабатывает строку ответа от сервера"""
+    """Парсит и валидирует строку ответа от сервера.
+
+    Args:
+        response_line (str): Строка ответа в формате Server-Sent Events (SSE)
+
+    Returns:
+        Dict: Распарсенные данные или пустой словарь при ошибке
+
+    Обрабатывает:
+        - JSON декодинг
+        - Проверку формата данных
+        - Различные типы ошибок с детальным логированием
+    """
     try:
         if response_line.startswith("data: "):
             data = json.loads(response_line[6:])
@@ -24,20 +36,35 @@ async def process_stream_response(response_line: str) -> Dict[str, Any]:
     return {}
 
 async def send_gradual_message(message, response) -> Tuple[Optional[str], Optional[Dict]]:
-    """Отправляет сообщение постепенно, по мере получения данных"""
+    """Постепенная отправка сообщения с динамическим обновлением контента.
+
+    Args:
+        message: Объект сообщения от телеграм-библиотеки
+        response: Асинхронный ответ сервера
+
+    Returns:
+        Tuple: (финальный текст сообщения, состояние диалога) или (None, None)
+
+    Особенности:
+        - Построчное чтение потокового ответа
+        - Буферизация вывода для снижения нагрузки
+        - Динамическое редактирование сообщения
+        - Сохранение состояния диалога
+    """
     try:
         msg_logger.info("Начало отправки постепенного сообщения")
-        partial_message = ""
-        message_id = None
-        update_buffer = ""
-        conversation_state = None
+        partial_message = ""      # Аккумулируемый текст ответа
+        message_id = None         # Идентификатор сообщения в Telegram
+        update_buffer = ""        # Буфер для накопления фрагментов
+        conversation_state = None # Состояние диалога от LLM
 
+        # Асинхронная обработка потокового ответа
         for line in response.iter_lines():
             if not line:
                 continue
 
             try:
-                # Даем возможность другим корутинам выполняться
+                # Кооперативная многозадачность - передача управления
                 await asyncio.sleep(0)
 
                 decoded_line = line.decode('utf-8')
@@ -46,7 +73,7 @@ async def send_gradual_message(message, response) -> Tuple[Optional[str], Option
                 if not chunk:
                     continue
 
-                # Проверяем, содержит ли чанк информацию о состоянии диалога
+                # Обработка состояния диалога
                 if "conversation_state" in chunk:
                     conversation_state = chunk["conversation_state"]
                     if isinstance(conversation_state, dict):
@@ -59,6 +86,7 @@ async def send_gradual_message(message, response) -> Tuple[Optional[str], Option
                 msg_logger.error(f"Ошибка при обработке строки ответа: {e}")
                 continue
 
+            # Извлечение контента из чанка
             if "choices" in chunk and len(chunk["choices"]) > 0:
                 delta = chunk["choices"][0].get("delta", {}).get("content", "")
                 if delta:
@@ -66,6 +94,8 @@ async def send_gradual_message(message, response) -> Tuple[Optional[str], Option
                     if len(update_buffer) >= BUFFER_SIZE:
                         partial_message += update_buffer
                         update_buffer = ""
+
+                        # Логика отправки/обновления сообщения
                         if message_id is None:
                             msg_logger.info("Отправка первой части сообщения")
                             sent_message = await message.answer(partial_message)
@@ -78,7 +108,7 @@ async def send_gradual_message(message, response) -> Tuple[Optional[str], Option
                                 text=partial_message
                             )
 
-        # Отправляем оставшийся текст
+        # Отправка остатков из буфера
         if update_buffer:
             partial_message += update_buffer
             if message_id is None:

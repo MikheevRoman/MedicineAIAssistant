@@ -22,6 +22,15 @@ OPENAI_HEADERS = {
 
 @dataclass
 class ProblemInfo:
+    """
+    Класс для работы с информацией о симптомах и проблеме пациента.
+
+    Атрибуты:
+    - symptoms (List[str]): список выявленных симптомов
+    - duration (Optional[str]): продолжительность симптомов (если указано)
+    - severity (Optional[str]): тяжесть состояния (если указано)
+    - symptoms_complete (bool): флаг завершенности описания симптомов
+    """
     symptoms: List[str]
     duration: Optional[str] = None
     severity: Optional[str] = None
@@ -32,7 +41,11 @@ class ProblemInfo:
         self.symptoms = list(set(self.symptoms))
 
     def add_symptoms(self, new_symptoms: List[str]):
-        """Добавляет симптомы и сбрасывает флаг завершения при новых симптомах"""
+        """
+        Добавляет новые симптомы к текущему списку.
+
+        Если список симптомов обновляется, флаг завершенности сбрасывается.
+        """
         if new_symptoms:
             combined = list(set(self.symptoms + new_symptoms))
             if len(combined) > len(self.symptoms):
@@ -40,10 +53,18 @@ class ProblemInfo:
                 self.symptoms_complete = False
 
     def extract_symptoms(self, messages: List[dict]) -> None:
-        """Анализирует сообщения и обновляет симптомы и флаг завершения"""
+        """
+        Анализирует сообщения пользователя для выявления симптомов.
+
+        Использует GPT-модель для:
+        1. Извлечения медицинских симптомов
+        2. Определения полноты описания симптомов
+        """
         try:
+            # Объединяем все сообщения пользователя в одну строку
             user_messages = " ".join([msg["content"] for msg in messages if msg["role"] == "user"])
 
+            # Системное сообщение с инструкциями для модели
             system_prompt = {
                 "role": "system",
                 "content": """Вы - медицинский ассистент. Проанализируйте сообщение пользователя и:
@@ -91,29 +112,34 @@ class ProblemInfo:
             {"symptoms": ["симптом1", ...], "symptoms_complete": true/false}"""
             }
 
+            # Формируем список сообщений для модели
             chat_messages = [
-                system_prompt,
-                {"role": "user", "content": user_messages}
+                system_prompt, # Системное сообщение с инструкцией
+                {"role": "user", "content": user_messages} # Сообщение пользователя
             ]
 
+            # Формируем payload для запроса к API
             payload = {
-                "model": "gpt-4o-mini",
+                "model": "gpt-4o-mini",  # Выбранная модель
                 "messages": chat_messages,
-                "temperature": 0.1,
-                "max_tokens": 200
+                "temperature": 0.1,      # Низкая температура для минимальной вариативности
+                "max_tokens": 200        # Ограничение на количество токенов в ответе
             }
 
+            # Отправляем POST-запрос к API
             response = requests.post(
                 PROXY_OPENAI_URL,
                 headers=OPENAI_HEADERS,
                 json=payload
             )
 
+            # Обработка успешного ответа
             if response.status_code == 200:
                 result = json.loads(response.json()["choices"][0]["message"]["content"])
-                symptoms = list(set(result.get("symptoms", [])))
-                complete = result.get("symptoms_complete", False)
+                symptoms = list(set(result.get("symptoms", []))) # Получаем список симптомов
+                complete = result.get("symptoms_complete", False) # Получаем флаг завершенности
 
+                # Обновляем симптомы и флаг завершенности
                 self.add_symptoms(symptoms)
                 if complete:
                     self.symptoms_complete = True

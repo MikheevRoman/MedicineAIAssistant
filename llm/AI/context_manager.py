@@ -9,40 +9,53 @@ rag_logger = setup_logger('context_manager', 'RAG_LOGGING')
 file_logger = setup_logger('context_manager_file', 'FILE_OPERATIONS_LOGGING')
 
 def get_relevant_context(query: str, vector_stores: Dict[str, FAISS], n_results: int = 5) -> str:
-    """Получает релевантный контекст с использованием улучшенных методов поиска"""
-    analyzer = MedicalContextAnalyzer()
-    all_results = []
+    """
+    Получает релевантный контекст из векторных хранилищ.
+
+    Аргументы:
+    - query: Запрос пользователя.
+    - vector_stores: Словарь векторных хранилищ, где ключ — категория, значение — объект FAISS.
+    - n_results: Количество релевантных результатов для возврата.
+
+    Возвращает:
+    - Итоговый текст релевантного контекста.
+    """
+    analyzer = MedicalContextAnalyzer() # Инициализация анализатора медицинского контекста
+    all_results = [] # Список всех найденных результатов
     
     rag_logger.info(f"\n{'='*50}\nПоиск контекста для запроса: {query}")
     rag_logger.info(f"Количество запрашиваемых результатов: {n_results}")
     rag_logger.info(f"Доступные категории: {', '.join(vector_stores.keys())}")
     
-    # Очищаем и подготавливаем запрос
-    clean_query = clean_text(query)
-    query_terms = analyzer.find_medical_terms(clean_query)
+    # Очистка и предобработка запроса
+    clean_query = clean_text(query)  # Удаление лишних символов и приведение к стандартному виду
+    query_terms = analyzer.find_medical_terms(clean_query) # Извлечение медицинских терминов из запроса
     rag_logger.info(f"Очищенный запрос: {clean_query}")
     rag_logger.info(f"Найденные медицинские термины: {', '.join(query_terms)}")
-    
+
+    # Поиск контекста в каждой категории
     for category, store in vector_stores.items():
         try:
             rag_logger.info(f"\nПоиск в категории '{category}':")
-            # Получаем больше результатов для последующей фильтрации
+            # Получение кандидатов результатов (с запасом для фильтрации)
             results = store.similarity_search_with_score(clean_query, k=n_results * 2)
             rag_logger.info(f"Получено {len(results)} результатов")
-            
+
+            # Обработка каждого результата
             for doc, score in results:
                 # Нормализуем score из FAISS (меньше = лучше) в релевантность (больше = лучше)
-                base_relevance = 1 / (1 + score)  # Преобразуем в диапазон (0, 1]
+                base_relevance = 1 / (1 + score)  # Преобразование значения из диапазона (0, ∞) в (0, 1]
                 
-                # Находим медицинские термины в тексте
+                # Извлечение медицинских терминов из текста документа
                 medical_terms = analyzer.find_medical_terms(doc.page_content)
                 medical_relevance = analyzer.calculate_medical_relevance(
-                    doc.page_content, clean_query
+                    doc.page_content, clean_query # Оценка релевантности текста запросу
                 )
                 
-                # Рассчитываем итоговый скор как взвешенную сумму
+                # Итоговая оценка релевантности как взвешенная сумма
                 final_score = (base_relevance * 0.7) + (medical_relevance * 0.3)
-                
+
+                # Создание объекта результата
                 result = SearchResult(
                     category=category,
                     content=doc.page_content,
@@ -59,23 +72,26 @@ def get_relevant_context(query: str, vector_stores: Dict[str, FAISS], n_results:
                     f"\nНайденные термины: {', '.join(medical_terms)}"
                     f"\nИсточник: стр. {doc.metadata.get('page', 'н/д')}"
                 )
-                
+
+                # Добавление результата в общий список
                 all_results.append(result)
                 
         except Exception as e:
             rag_logger.error(f"Ошибка при поиске в категории {category}: {e}")
             continue
     
-    # Сортируем результаты по релевантности (больше = лучше)
+    # Сортировка результатов по релевантности (по убыванию)
     all_results.sort(key=lambda x: x.score, reverse=True)
     
     # Формируем итоговый контекст
     context = "\n\nРелевантная информация из медицинской литературы:\n"
     rag_logger.info(f"\n{'='*50}\nИтоговый контекст:")
-    
+
+    # Добавление релевантных фрагментов в текст
     for i, result in enumerate(all_results[:n_results], 1):
         medical_terms_str = ', '.join(result.medical_terms) if result.medical_terms else 'не найдены'
-        
+
+        # Форматирование текста результата
         chunk_text = (
             f"\nИз раздела {result.category}"
             f" (релевантность: {result.score:.1%}):\n"
@@ -92,4 +108,4 @@ def get_relevant_context(query: str, vector_stores: Dict[str, FAISS], n_results:
     
     rag_logger.info(f"\nОбщая длина контекста: {len(context)} символов")
     rag_logger.info(f"{'='*50}\n")
-    return context 
+    return context # Возврат готового контекста

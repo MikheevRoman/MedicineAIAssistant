@@ -1,0 +1,12 @@
+.busyDayContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 30vh;
+}
+
+.busyDay {
+  text-align: center;
+  color: var(--tg-theme-hint-color);
+}

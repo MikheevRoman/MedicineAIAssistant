@@ -1,0 +1,17 @@
+.idea
+llm/opt/
+llm/.idea/
+llm/__pycache__/
+llm/.venv/
+llm/AI/__pycache__/
+llm/AI/bot.log
+llm/TESTBOT/__pycache__/
+/llm/bot.log
+/.idea
+llm/.env
+llm/AI/logs/
+llm/TESTBOT/logs/
+llm/AI/managers/__pycache__
+llm/AI/managers/__pycache__
+**/__pycache__/
+*.pyc

@@ -1,0 +1,79 @@
+.container {
+    display: flex;
+    
+}
+
+.forScrollbarNone {
+    height: 80px;
+    overflow-y: hidden;
+}
+
+.scrollContainer {
+    overflow-x: scroll;
+    white-space: nowrap;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    
+    padding-bottom: 90px;
+    text-align: center;
+}
+
+
+.scrollDays {
+    display: inline-flex;
+    justify-content: center;
+    /* margin-left: 10px; */
+}
+
+.scrollDay {
+    display: flex;
+    flex-direction: column; 
+    justify-content: center;
+    align-items: center;
+    /* margin: 0 6px; */
+    
+}
+
+.dayOfWeek {
+    padding-top: 6px;
+    padding-left: 2px;
+    color: var(--tg-theme-hint-color);
+    opacity: 0.5;
+}
+
+
+.radioButton {
+    display: none;
+}
+
+.dayContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+}
+
+
+
+.radioButton:checked + .dayContainer {
+    background-color: rgba(46, 166, 255, 0.12);
+    color: var(--tg-theme-button-color);
+}
+
+/* Применяется к дням, для которых нет свободного времени */
+.inactiveDay {
+    opacity: 0.5;
+}
+
+/* Применяется к сегодняшнему дню */
+.currentDay {
+    color: var(--tg-theme-button-color);
+}
+
+
+
+

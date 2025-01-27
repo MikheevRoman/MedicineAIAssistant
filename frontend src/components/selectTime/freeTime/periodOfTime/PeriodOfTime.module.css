@@ -1,0 +1,41 @@
+.container {
+    margin-bottom: 20px;
+}
+
+.partOfDay {
+    color: var(--tg-theme-hint-color);
+}
+
+.freeTimeContainer {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 9px;
+    padding-top: 12px;
+}
+
+.timeLabel { 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
+    background-color: var(--tg-theme-section-bg-color);
+    /* background-color: gray; */
+    color: var(--tg-theme-text-color);
+    max-width: 82px;
+    height: 34px;
+}
+
+.radioInput {
+    display: none;
+}
+
+.radioInput:checked + .timeLabel {
+    background-color: var(--tg-theme-button-color);
+    /* background-color: blue; */
+    color: var(--tg-theme-button-text-color);
+}
+
+/* .timeLabel {
+    display: flex;
+    align-items: center;
+} */

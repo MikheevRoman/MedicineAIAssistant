@@ -1,0 +1,12 @@
+.container {
+    /* height: 50px; */
+    display: flex;
+    -right: 10px;
+}
+
+.btn {
+    width: 30px;
+    /* background-color: black; */
+    border: none;
+    background-color: var(--tg-theme-bg-color);
+}

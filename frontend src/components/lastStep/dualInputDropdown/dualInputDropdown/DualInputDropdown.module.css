@@ -1,0 +1,51 @@
+.container {
+    position: relative;
+    border-radius: 10px;
+    background-color: var(--tg-theme-bg-color);
+}
+
+.inputWrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 1px;
+    /* Высота border-bottom */
+    background-color: var(--tg-theme-bg-color);
+    
+}
+
+.inpt {
+    background-color: var(--tg-theme-bg-color);
+    
+    height: 44px;
+    border: none;
+    color: var(--tg-theme-text-color);
+    font-size: 17px;
+    line-height: 22px;
+    letter-spacing: -0.43px;
+    font-family: 'SF Pro Regular';
+    padding-left: 16px;
+    outline: none;
+}
+
+.borderBottom {
+    position: absolute;
+    bottom: 0;
+    left: 16px;
+    right: 0;
+    border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
+    pointer-events: none;
+}
+
+.inpt::placeholder {
+    color: var(--tg-theme-hint-color);
+    font-size: 17px;
+    line-height: 22px;
+    letter-spacing: -0.43px;
+    font-family: 'SF Pro Regular';
+}
+
+
+.linkText {
+    color: var(--tg-theme-link-color);
+}

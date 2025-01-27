@@ -1,0 +1,16 @@
+.ftnt {
+    padding-top: 9px;
+    padding-left: 16px;
+    color: var(--tg-theme-hint-color);
+}
+
+.aboba {
+    margin-top: 10px;
+    color: var(--tg-theme-hint-color);
+}
+
+.link {
+    /* color: var(--tg-theme-hint-color); */
+    text-decoration: underline;
+    cursor: pointer;
+}

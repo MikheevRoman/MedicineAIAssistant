@@ -10,7 +10,7 @@ MedicineAIAssistant
 https://t.me/GrosMedicineBot
 
 ## Ссылка на презентацию
-ссылка на презентацию
+https://github.com/MikheevRoman/MedicineAIAssistant/blob/aibranch/Gros%20Bot.pdf
 
 ## Ссылка на видео-скринкаст
 https://disk.yandex.ru/d/M446LTJVR2KgNA

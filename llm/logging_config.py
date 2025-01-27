@@ -46,6 +46,11 @@ def setup_logger(name: str, log_type: str) -> logging.Logger:
         name: Имя логгера
         log_type: Тип логирования из LOG_FLAGS
     """
+
+    log_dir = 'logs'
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
     logger = logging.getLogger(name)
     
     if not logger.handlers:

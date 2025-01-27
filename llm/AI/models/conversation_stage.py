@@ -1,6 +1,6 @@
 from enum import Enum
 
 class ConversationStage(Enum):
-    SYMPTOMS = 1
-    PATIENT_INFO = 2
+    PATIENT_INFO = 1
+    SYMPTOMS = 2
     DIAGNOSIS = 3 

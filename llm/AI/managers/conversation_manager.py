@@ -28,13 +28,20 @@ class ConversationManager:
     def __init__(self, user_id: str):
         """Инициализация менеджера разговора для конкретного пользователя"""
         self.user_id = user_id
-        self.stage = ConversationStage.SYMPTOMS
+        self.stage = ConversationStage.PATIENT_INFO
         self.pending_stage = None
         self.problem_info = ProblemInfo([])
         self.patient_info = PatientInfo()
         self.error_state = False
         conv_logger.info(
             f"Инициализирован новый менеджер разговора для пользователя {user_id}. Начальный этап: SYMPTOMS")
+
+
+    def set_stage(self, stage: ConversationStage):
+        """Устанавливает текущий этап разговора"""
+        self.stage = stage
+        conv_logger.info(f"Этап разговора для пользователя {self.user_id} установлен на {stage.name}")
+
 
     def get_conversation_state(self) -> dict:
         """Возвращает текущее состояние диалога"""
@@ -59,26 +66,17 @@ class ConversationManager:
                 self.problem_info.extract_symptoms(temp_messages)
 
                 if self.problem_info.symptoms_complete:
-                    self.pending_stage = ConversationStage.PATIENT_INFO
+                    self.pending_stage = ConversationStage.DIAGNOSIS
                     if old_stage != self.pending_stage:
-                        messages_to_send.extend(STAGE_TRANSITION_MESSAGES["SYMPTOMS_TO_PATIENT_INFO"].messages)
+                        # Добавляем сообщение о переходе и очищаем другие сообщения
+                        messages_to_send = STAGE_TRANSITION_MESSAGES["SYMPTOMS_TO_DIAGNOSIS"].messages.copy()
 
             elif self.stage == ConversationStage.PATIENT_INFO:
-                # Извлекаем и сохраняем всю информацию о пациенте
-                # Получаем предыдущее сообщение ассистента
-                prev_message = next((msg['content'] for msg in reversed(messages) 
-                                  if msg['role'] == 'assistant'), None)
-                
-                # Проверяем возраст
+                prev_message = next((msg['content'] for msg in reversed(messages) if msg['role'] == 'assistant'), None)
                 age = self.patient_info.extract_age(message, prev_message)
-                
-                # Проверяем хронические заболевания
                 diseases = self.patient_info.extract_chronic_diseases(message, prev_message)
-                
-                # Проверяем аллергии
                 allergies = self.patient_info.extract_allergies(message, prev_message)
-                
-                # Логируем собранную информацию
+
                 conv_logger.info(
                     f"Собранная информация о пациенте:\n"
                     f"Возраст: {self.patient_info.age}\n"
@@ -87,41 +85,42 @@ class ConversationManager:
                 )
 
                 # Проверяем, какой информации не хватает
+                missing_info = []
                 if self.patient_info.age is None:
-                    messages_to_send.append(INCOMPLETE_INFO_MESSAGES["MISSING_AGE"])
+                    missing_info.append(INCOMPLETE_INFO_MESSAGES["MISSING_AGE"])
                 elif self.patient_info.has_chronic_diseases and not self.patient_info.chronic_diseases:
-                    messages_to_send.append(INCOMPLETE_INFO_MESSAGES["MISSING_CHRONIC_DISEASES"])
+                    missing_info.append(INCOMPLETE_INFO_MESSAGES["MISSING_CHRONIC_DISEASES"])
                 elif self.patient_info.has_allergies and not self.patient_info.allergies:
-                    messages_to_send.append(INCOMPLETE_INFO_MESSAGES["MISSING_ALLERGIES"])
+                    missing_info.append(INCOMPLETE_INFO_MESSAGES["MISSING_ALLERGIES"])
 
-                # Планируем переход если вся информация собрана
-                if self.patient_info.is_complete():
-                    self.pending_stage = ConversationStage.DIAGNOSIS
-                    # Добавляем сообщение о переходе только при смене этапа
-                    if old_stage != self.pending_stage:
-                        messages_to_send.extend(STAGE_TRANSITION_MESSAGES["PATIENT_INFO_TO_DIAGNOSIS"].messages)
-                    conv_logger.info("Информация о пациенте собрана полностью, переход к диагностике")
-                else:
-                    # Остаемся на текущем этапе, если информация неполная
+                if missing_info:
+                    messages_to_send.extend(missing_info)
                     self.pending_stage = ConversationStage.PATIENT_INFO
-                    conv_logger.info("Информация о пациенте неполная, продолжаем сбор")
+                else:
+                    self.pending_stage = ConversationStage.SYMPTOMS
+                    if old_stage != self.pending_stage:
+                        messages_to_send = STAGE_TRANSITION_MESSAGES["PATIENT_INFO_TO_SYMPTOMS"].messages.copy()
 
             elif self.stage == ConversationStage.DIAGNOSIS:
-                # На этапе диагностики не меняем этап
                 self.pending_stage = ConversationStage.DIAGNOSIS
-            
-            else:
-                # Если каким-то образом этап стал None, возвращаемся к сбору информации
-                conv_logger.warning(f"Обнаружен некорректный этап {self.stage}, возврат к PATIENT_INFO")
-                self.stage = ConversationStage.PATIENT_INFO
-                self.pending_stage = ConversationStage.PATIENT_INFO
-                messages_to_send.extend(STAGE_TRANSITION_MESSAGES["SYMPTOMS_TO_PATIENT_INFO"].messages)
 
-            # Логирование изменений
-            conv_logger.info(f"Текущий этап: {self.stage.name}, Следующий этап: {self.pending_stage.name if self.pending_stage else 'None'}")
-            
+            # Определяем, произошел ли переход этапа
+            transition_occurred = old_stage != self.pending_stage
+
+            # Если переход произошел, оставляем только сообщения о переходе
+            if transition_occurred and messages_to_send:
+                # Фильтруем сообщения, оставляем только переходные
+                transition_messages = []
+                for msg in messages_to_send:
+                    if any(msg in transition_msgs.messages for transition_msgs in STAGE_TRANSITION_MESSAGES.values()):
+                        transition_messages.append(msg)
+                messages_to_send = transition_messages
+
+            conv_logger.info(
+                f"Текущий этап: {self.stage.name}, Следующий этап: {self.pending_stage.name if self.pending_stage else 'None'}")
+
             return self.get_conversation_state(), messages_to_send
-            
+
         except Exception as e:
             conv_logger.error(f"Ошибка при обработке сообщения: {str(e)}")
             self.error_state = True

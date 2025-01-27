@@ -310,7 +310,6 @@ async def handle_message(message: Message):
             "Пожалуйста, попробуйте позже."
         )
 
-
 @dp.message()
 async def handle_message_sync(message: Message):
     """Альтернативный обработчик с синхронным взаимодействием"""
@@ -377,16 +376,6 @@ async def handle_message_sync(message: Message):
                     "symptoms": conversation_state.get("symptoms", []),
                     "patient_info": conversation_state.get("patient_info", {})
                 })
-
-                # Обработка дополнительных сообщений при смене этапа
-                if old_stage != new_stage:
-                    additional_messages = conversation_state.get("messages", [])
-                    for msg in additional_messages:
-                        conversation_history[user_id]["messages"].append({
-                            "role": "assistant",
-                            "content": msg
-                        })
-                        await message.answer(msg)
 
                 save_conversation_history(conversation_history)
                 bot_logger.info(f"[SYNC] Обновлена сессия {user_id}")

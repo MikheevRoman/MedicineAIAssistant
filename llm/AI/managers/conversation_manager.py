@@ -1,9 +1,9 @@
 from typing import List, Tuple
 from logging_config import setup_logger
-from models.conversation_stage import ConversationStage
-from models.problem_info import ProblemInfo
-from models.patient_info import PatientInfo
-from models.message_templates import START_MESSAGES, STAGE_TRANSITION_MESSAGES, INCOMPLETE_INFO_MESSAGES
+from AI.models.conversation_stage import ConversationStage
+from AI.models.problem_info import ProblemInfo
+from AI.models.patient_info import PatientInfo
+from AI.models.message_templates import START_MESSAGES, STAGE_TRANSITION_MESSAGES, INCOMPLETE_INFO_MESSAGES
 
 # Инициализация логгеров
 conv_logger = setup_logger('conversation', 'CONVERSATION_LOGGING')
@@ -55,19 +55,13 @@ class ConversationManager:
             messages_to_send = []
 
             if self.stage == ConversationStage.SYMPTOMS:
-                # Извлекаем симптомы из всех сообщений, включая текущее
                 temp_messages = messages + [{"role": "user", "content": message}]
-                symptoms = ProblemInfo.extract_symptoms(temp_messages)
-                if symptoms:
-                    self.problem_info.add_symptoms(symptoms)
-                    conv_logger.info(f"Добавлены новые симптомы: {symptoms}")
-                    conv_logger.info(f"Текущий список симптомов: {self.problem_info.symptoms}")
+                self.problem_info.extract_symptoms(temp_messages)
 
-                # Планируем переход на PATIENT_INFO после любого первого сообщения
-                self.pending_stage = ConversationStage.PATIENT_INFO
-                # Добавляем сообщение о переходе только при смене этапа
-                if old_stage != self.pending_stage:
-                    messages_to_send.extend(STAGE_TRANSITION_MESSAGES["SYMPTOMS_TO_PATIENT_INFO"].messages)
+                if self.problem_info.symptoms_complete:
+                    self.pending_stage = ConversationStage.PATIENT_INFO
+                    if old_stage != self.pending_stage:
+                        messages_to_send.extend(STAGE_TRANSITION_MESSAGES["SYMPTOMS_TO_PATIENT_INFO"].messages)
 
             elif self.stage == ConversationStage.PATIENT_INFO:
                 # Извлекаем и сохраняем всю информацию о пациенте

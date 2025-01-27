@@ -201,18 +201,18 @@ async def clear_command(message: Message):
     
     save_conversation_history(conversation_history)
 
-@dp.message()
+
 async def handle_message(message: Message):
     """Обработчик текстовых сообщений"""
     user_id = str(message.from_user.id)
     user_message = message.text
-    
+
     bot_logger.info(f"Получено новое сообщение от пользователя {user_id}")
     bot_logger.info(f"Текст сообщения: {user_message}")
-    
+
     try:
         conversation_history = load_conversation_history()
-        
+
         # Проверяем существование пользователя и корректность структуры данных
         if user_id not in conversation_history or not isinstance(conversation_history[user_id], dict):
             conversation_history[user_id] = create_user_session(user_id)
@@ -225,28 +225,36 @@ async def handle_message(message: Message):
             is_start_dialog = len(conversation_history[user_id]["messages"]) == 0
             bot_logger.info(f"Продолжение диалога с пользователем {user_id}")
             bot_logger.info(f"Текущий этап: {conversation_history[user_id].get('current_stage', 'SYMPTOMS')}")
-        
+
         conversation_history[user_id]["messages"].append({
             "role": "user",
             "content": user_message
         })
-        
+
         bot_logger.info("Отправка запроса к серверу")
+
+        # Формируем JSON, который будет отправлен
+        request_json = {
+            'prompt': conversation_history[user_id]["messages"],
+            'user_id': user_id,
+            'is_start_dialog': is_start_dialog
+        }
+
+        # Выводим JSON в консоль
+        bot_logger.info("Отправляемый JSON:")
+        bot_logger.info(json.dumps(request_json, indent=4, ensure_ascii=False))
+
         try:
             response = requests.post(
                 'http://localhost:5000/check-uc',
-                json={
-                    'prompt': conversation_history[user_id]["messages"],
-                    'user_id': user_id,
-                    'is_start_dialog': is_start_dialog
-                },
+                json=request_json,
                 stream=True
             )
-            
+
             if response.status_code == 200:
                 # Используем новую функцию для постепенной отправки сообщения
                 full_response, conversation_state = await send_gradual_message(message, response)
-                
+
                 if full_response and conversation_state:
                     # Обновляем историю сообщений
                     conversation_history[user_id]["messages"].append({
@@ -257,7 +265,7 @@ async def handle_message(message: Message):
                     # Обновляем состояние диалога
                     old_stage = conversation_history[user_id].get("current_stage")
                     new_stage = conversation_state.get("next_stage") or conversation_state.get("current_stage")
-                    
+
                     conversation_history[user_id].update({
                         "current_stage": new_stage,
                         "symptoms": conversation_state["symptoms"],
@@ -294,13 +302,109 @@ async def handle_message(message: Message):
                 "Извините, произошла ошибка при обработке вашего запроса. "
                 "Пожалуйста, попробуйте позже."
             )
-    
+
     except Exception as e:
         bot_logger.error(f"Произошла ошибка: {str(e)}")
         await message.answer(
             "Извините, произошла ошибка при обработке вашего запроса. "
             "Пожалуйста, попробуйте позже."
         )
+
+
+@dp.message()
+async def handle_message_sync(message: Message):
+    """Альтернативный обработчик с синхронным взаимодействием"""
+    user_id = str(message.from_user.id)
+    user_message = message.text
+
+    bot_logger.info(f"[SYNC] Новое сообщение от {user_id}")
+    bot_logger.info(f"[SYNC] Текст: {user_message}")
+
+    try:
+        conversation_history = load_conversation_history()
+
+        # Инициализация или получение сессии пользователя
+        if user_id not in conversation_history or not isinstance(conversation_history[user_id], dict):
+            conversation_history[user_id] = create_user_session(user_id)
+            is_start_dialog = True
+            bot_logger.info(f"[SYNC] Создана новая сессия для {user_id}")
+        else:
+            is_start_dialog = len(conversation_history[user_id].get("messages", [])) == 0
+            bot_logger.info(f"[SYNC] Продолжение диалога с {user_id}")
+            bot_logger.info(f"[SYNC] Текущий этап: {conversation_history[user_id].get('current_stage', 'SYMPTOMS')}")
+
+        # Добавляем сообщение пользователя в историю
+        conversation_history[user_id].setdefault("messages", []).append({
+            "role": "user",
+            "content": user_message
+        })
+
+        # Формируем запрос
+        request_json = {
+            'prompt': conversation_history[user_id]["messages"],
+            'user_id': user_id,
+            'is_start_dialog': is_start_dialog
+        }
+
+        try:
+            # Отправляем запрос к синхронному эндпоинту
+            response = requests.post(
+                'http://localhost:5000/check-uc-sync',
+                json=request_json
+            )
+
+            if response.status_code == 200:
+                response_data = response.json()
+                # Извлекаем данные из ответа
+                full_response = response_data.get("response", "")
+                conversation_state = response_data.get("conversation_state", {})
+
+                # Отправляем ответ пользователю
+                await message.answer(full_response)
+
+                # Обновляем историю сообщений
+                conversation_history[user_id]["messages"].append({
+                    "role": "assistant",
+                    "content": full_response
+                })
+
+                # Обновляем состояние диалога из conversation_state
+                old_stage = conversation_history[user_id].get("current_stage")
+                new_stage = conversation_state.get("current_stage", "SYMPTOMS")
+
+                conversation_history[user_id].update({
+                    "current_stage": new_stage,
+                    "symptoms": conversation_state.get("symptoms", []),
+                    "patient_info": conversation_state.get("patient_info", {})
+                })
+
+                # Обработка дополнительных сообщений при смене этапа
+                if old_stage != new_stage:
+                    additional_messages = conversation_state.get("messages", [])
+                    for msg in additional_messages:
+                        conversation_history[user_id]["messages"].append({
+                            "role": "assistant",
+                            "content": msg
+                        })
+                        await message.answer(msg)
+
+                save_conversation_history(conversation_history)
+                bot_logger.info(f"[SYNC] Обновлена сессия {user_id}")
+
+            else:
+                error_msg = f"Ошибка сервера: {response.status_code}"
+                bot_logger.error(f"[SYNC] {error_msg}")
+                await message.answer("Извините, произошла ошибка. Пожалуйста, попробуйте позже.")
+
+        except Exception as e:
+            error_msg = f"Ошибка запроса: {str(e)}"
+            bot_logger.error(f"[SYNC] {error_msg}")
+            await message.answer("Ошибка обработки запроса. Попробуйте ещё раз.")
+
+    except Exception as e:
+        error_msg = f"Критическая ошибка: {str(e)}"
+        bot_logger.error(f"[SYNC] {error_msg}")
+        await message.answer("Произошла внутренняя ошибка. Пожалуйста, попробуйте позже.")
 
 
 async def main():

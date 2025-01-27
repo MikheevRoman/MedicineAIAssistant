@@ -1,6 +1,8 @@
+import base64
 import os
 import json
 import requests
+from aiogram.types import Message, ContentType
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
@@ -9,6 +11,7 @@ import asyncio
 from message_handler import send_gradual_message
 from logging_config import setup_logger
 from typing import Tuple, Optional
+from aiogram import F
 
 # Инициализация логгеров
 bot_logger = setup_logger('bot', 'API_LOGGING')
@@ -309,6 +312,107 @@ async def handle_message(message: Message):
             "Извините, произошла ошибка при обработке вашего запроса. "
             "Пожалуйста, попробуйте позже."
         )
+
+
+@dp.message(F.content_type == ContentType.PHOTO)
+async def handle_photo_message(message: Message):
+    """Обработчик для сообщений с изображениями и текстом (подписью)"""
+    user_id = str(message.from_user.id)
+    bot_logger.info(f"[PHOTO] Получено изображение от {user_id}")
+    print("1")
+    try:
+        # Получаем файл изображения
+        photo = message.photo[-1]  # Берем фото с максимальным разрешением
+        file = await message.bot.get_file(photo.file_id)
+
+        # Скачиваем и конвертируем в base64
+        image_data = await message.bot.download_file(file.file_path)
+        image_base64 = base64.b64encode(image_data.read()).decode('utf-8')
+
+        # Получаем подпись к изображению (если есть)
+        caption = message.caption
+        if caption:
+            bot_logger.info(f"[PHOTO] Подпись к изображению: {caption}")
+        else:
+            bot_logger.info("[PHOTO] Подпись к изображению отсутствует")
+
+        conversation_history = load_conversation_history()
+
+        # Инициализация сессии пользователя
+        if user_id not in conversation_history or not isinstance(conversation_history[user_id], dict):
+            conversation_history[user_id] = create_user_session(user_id)
+            is_start_dialog = True
+            bot_logger.info(f"[PHOTO] Создана новая сессия для {user_id}")
+        else:
+            is_start_dialog = len(conversation_history[user_id].get("messages", [])) == 0
+
+        # Добавляем сообщение пользователя в историю
+        user_message = {
+            "role": "user",
+            "content": "[Пользователь отправил фотографию кожного покрова]"
+        }
+
+        # Если есть подпись, добавляем её в историю
+        if caption:
+            user_message["content"] += f"\nПодпись к фото: {caption}"
+
+        conversation_history[user_id].setdefault("messages", []).append(user_message)
+
+        # Формируем запрос
+        request_json = {
+            'prompt': conversation_history[user_id]["messages"],
+            'user_id': user_id,
+            'is_start_dialog': is_start_dialog,
+            'image': f"data:image/jpeg;base64,{image_base64}"
+        }
+
+        try:
+            # Отправляем запрос к эндпоинту для изображений
+            response = requests.post(
+                'http://localhost:5000/check-uc-sync-image',
+                json=request_json
+            )
+
+            if response.status_code == 200:
+                response_data = response.json()
+                full_response = response_data.get("response", "")
+                conversation_state = response_data.get("conversation_state", {})
+
+                # Отправляем ответ пользователю
+                await message.answer(full_response)
+
+                # Обновляем историю сообщений
+                conversation_history[user_id]["messages"].append({
+                    "role": "assistant",
+                    "content": full_response
+                })
+
+                # Обновляем состояние диалога
+                conversation_history[user_id].update({
+                    "current_stage": conversation_state.get("current_stage", "SYMPTOMS"),
+                    "symptoms": conversation_state.get("symptoms", []),
+                    "patient_info": conversation_state.get("patient_info", {}),
+                    "problem_info": conversation_state.get("problem_info", {})
+                })
+
+                save_conversation_history(conversation_history)
+                bot_logger.info(f"[PHOTO] Обновлена сессия {user_id}")
+
+            else:
+                error_msg = f"Ошибка сервера: {response.status_code}"
+                bot_logger.error(f"[PHOTO] {error_msg}")
+                await message.answer("Ошибка обработки изображения. Пожалуйста, попробуйте ещё раз.")
+
+        except Exception as e:
+            error_msg = f"Ошибка запроса: {str(e)}"
+            bot_logger.error(f"[PHOTO] {error_msg}")
+            await message.answer("Ошибка обработки изображения. Попробуйте ещё раз.")
+
+    except Exception as e:
+        error_msg = f"Критическая ошибка: {str(e)}"
+        bot_logger.error(f"[PHOTO] {error_msg}")
+        await message.answer("Произошла ошибка при обработке изображения. Пожалуйста, попробуйте позже.")
+
 
 @dp.message()
 async def handle_message_sync(message: Message):

@@ -1,10 +1,14 @@
+import base64
 import json
+import tempfile
+import re
 import requests
 from dotenv import load_dotenv
-from flask import Flask, request, Response, stream_with_context, jsonify
+from flask import Flask, request, Response, stream_with_context, jsonify, current_app
 from openai import OpenAI
 import os
 
+from AI.image_process import generate_from_image
 from AI.models import ConversationStage
 from embeddings_handler import CustomEmbeddings
 from pdf_processor import load_and_process_pdfs
@@ -203,6 +207,86 @@ def process_data_sync():
 
     except Exception as e:
         api_logger.error(f"Ошибка в синхронном запросе: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
+@app.route('/check-uc-sync-image', methods=['POST'])
+def process_image_sync():
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        image_base64 = data.get('image')
+        messages = data.get('prompt', [])
+        is_start_dialog = data.get('is_start_dialog', False)
+
+        if not user_id:
+            api_logger.error("Отсутствует user_id в запросе с изображением")
+            return jsonify({"error": "Missing user_id"}), 400
+
+        if not image_base64:
+            api_logger.error("Отсутствует изображение в запросе")
+            return jsonify({"error": "Missing image"}), 400
+
+        # Декодирование и сохранение изображения
+        try:
+            image_data = base64.b64decode(image_base64.split(',')[-1])
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp_file:
+                temp_file.write(image_data)
+                image_path = temp_file.name
+        except Exception as e:
+            api_logger.error(f"Ошибка декодирования изображения: {str(e)}")
+            return jsonify({"error": "Invalid image format"}), 400
+
+        # Обработка изображения нейросетью
+        try:
+            image_response = ''.join(generate_from_image(image_path))
+            print("Ответ от модели анализа изображений:", image_response)
+
+            # Парсинг ответа нейросети
+            symptoms_list = []
+            match = re.search(r'\[(.*?)\]', image_response)
+            if match:
+                symptoms_str = match.group(1)
+                symptoms_list = [s.strip() for s in symptoms_str.split(',') if s.strip()]
+
+            # Обновление информации о проблеме в менеджере
+            if symptoms_list:
+                conversation_manager, _ = ConversationManager.get_instance(user_id, is_start_dialog)
+                existing_symptoms = set(conversation_manager.problem_info.symptoms)
+
+                new_symptoms = [symptom for symptom in symptoms_list if symptom not in existing_symptoms]
+                conversation_manager.problem_info.symptoms.extend(new_symptoms)
+
+                api_logger.info(f"Добавлены симптомы из изображения: {new_symptoms}")
+
+        except Exception as e:
+            api_logger.error(f"Ошибка при обработке изображения: {str(e)}")
+            return jsonify({"error": "Image processing failed"}), 500
+        finally:
+            os.unlink(image_path)
+
+        # Добавляем результат анализа в историю сообщений
+        if symptoms_list:
+            messages.append({
+                "role": "system",
+                "content": f"Анализ изображения выявил следующие проблемы: {', '.join(symptoms_list)}"
+            })
+
+        # Вызов основной логики обработки
+        with current_app.test_request_context(
+                '/check-uc-sync',
+                method='POST',
+                json={
+                    'user_id': user_id,
+                    'prompt': messages,
+                    'is_start_dialog': False  # Используем существующий менеджер
+                }
+        ):
+            response = process_data_sync()
+            return response.get_json(), response.status_code
+
+    except Exception as e:
+        api_logger.error(f"Ошибка в обработке изображения: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 
 
